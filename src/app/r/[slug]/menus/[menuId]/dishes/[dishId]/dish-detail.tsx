@@ -14,14 +14,12 @@ import {
   renameDish,
 } from "@/app/r/[slug]/menus/[menuId]/actions"
 import { updateDishDescription } from "@/app/r/[slug]/menus/[menuId]/dishes/[dishId]/actions"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  DishComponentsSection,
+  type ComponentOption,
+  type LinkedComponentRow,
+} from "@/app/r/[slug]/menus/[menuId]/dishes/[dishId]/dish-components-section"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -48,6 +46,8 @@ type DishDetailProps = {
   dishId: string
   dishName: string
   menuDescription: string | null
+  linkedComponents: LinkedComponentRow[]
+  availableComponents: ComponentOption[]
 }
 
 export function DishDetail({
@@ -58,6 +58,8 @@ export function DishDetail({
   dishId,
   dishName,
   menuDescription,
+  linkedComponents,
+  availableComponents,
 }: DishDetailProps) {
   const router = useRouter()
   const menuPath = `/r/${slug}/menus/${menuId}`
@@ -230,15 +232,13 @@ export function DishDetail({
         ) : null}
       </div>
 
-      <Card className="mt-10">
-        <CardHeader>
-          <CardTitle>Components</CardTitle>
-          <CardDescription>
-            Components and recipes come in the next phase.
-          </CardDescription>
-        </CardHeader>
-        <CardContent />
-      </Card>
+      <DishComponentsSection
+        slug={slug}
+        menuId={menuId}
+        dishId={dishId}
+        linked={linkedComponents}
+        availableComponents={availableComponents}
+      />
 
       <div className="mt-10 border-t pt-8">
         <Button

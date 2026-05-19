@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 
+import { RestaurantSubNav } from "@/components/restaurant-sub-nav"
 import { createClient } from "@/lib/supabase/server"
 import type { Tables } from "@/lib/supabase/database.types"
 
@@ -43,6 +44,7 @@ export default async function RestaurantLayout({
           >
             {typedRestaurant.name}
           </Link>
+          <RestaurantSubNav slug={slug} />
         </div>
       </div>
       <div className="container mx-auto flex max-w-5xl flex-1 flex-col px-4 py-6">
