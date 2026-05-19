@@ -1,9 +1,22 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { DishDetail } from "@/app/r/[slug]/menus/[menuId]/dishes/[dishId]/dish-detail"
 import { createClient } from "@/lib/supabase/server"
 
-export default async function DishDetailPlaceholderPage({
+type DishWithContext = {
+  id: string
+  name: string
+  menu_description: string | null
+  sections: {
+    name: string
+    menus: {
+      id: string
+      name: string
+    } | null
+  } | null
+}
+
+export default async function DishDetailPage({
   params,
 }: {
   params: Promise<{ slug: string; menuId: string; dishId: string }>
@@ -11,30 +24,35 @@ export default async function DishDetailPlaceholderPage({
   const { slug, menuId, dishId } = await params
   const supabase = await createClient()
 
-  const { data: dish } = await supabase
+  const { data: dishRaw } = await supabase
     .from("dishes")
-    .select("name")
+    .select(
+      "id, name, menu_description, sections(name, menus(id, name))"
+    )
     .eq("id", dishId)
     .single()
 
-  if (!dish) {
+  if (!dishRaw) {
+    notFound()
+  }
+
+  const dish = dishRaw as DishWithContext
+  const section = dish.sections
+  const menu = section?.menus
+
+  if (!section || !menu || menu.id !== menuId) {
     notFound()
   }
 
   return (
-    <div>
-      <p className="mb-4 text-sm">
-        <Link
-          href={`/r/${slug}/menus/${menuId}`}
-          className="text-primary hover:underline"
-        >
-          ← Back to menu
-        </Link>
-      </p>
-      <h1 className="text-2xl font-semibold tracking-tight">{dish.name}</h1>
-      <p className="mt-2 text-muted-foreground">
-        Dish details and menu description editing are coming in the next step.
-      </p>
-    </div>
+    <DishDetail
+      slug={slug}
+      menuId={menuId}
+      menuName={menu.name}
+      sectionName={section.name}
+      dishId={dish.id}
+      dishName={dish.name}
+      menuDescription={dish.menu_description}
+    />
   )
 }

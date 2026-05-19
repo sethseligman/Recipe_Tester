@@ -48,9 +48,22 @@ function menuDetailPath(slug: string, menuId: string) {
   return `/r/${slug}/menus/${menuId}`
 }
 
+function dishDetailPath(slug: string, menuId: string, dishId: string) {
+  return `/r/${slug}/menus/${menuId}/dishes/${dishId}`
+}
+
 function revalidateMenu(slug: string, menuId: string) {
   revalidatePath(menuDetailPath(slug, menuId))
   revalidatePath(`/r/${slug}`)
+}
+
+function revalidateDish(
+  slug: string,
+  menuId: string,
+  dishId: string
+) {
+  revalidatePath(dishDetailPath(slug, menuId, dishId))
+  revalidateMenu(slug, menuId)
 }
 
 export async function createSection(
@@ -275,7 +288,7 @@ export async function renameDish(
     throw error
   }
 
-  revalidatePath(menuDetailPath(slug, menuId))
+  revalidateDish(slug, menuId, dishId)
   return {}
 }
 
