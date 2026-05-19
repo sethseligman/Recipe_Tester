@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { MenuDetail, type SectionWithDishes } from "@/app/r/[slug]/menus/[menuId]/menu-detail"
