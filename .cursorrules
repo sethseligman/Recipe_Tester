@@ -1,0 +1,47 @@
+# Recipe Tester — Cursor project rules
+
+## Product context
+
+Recipe development and testing platform for restaurants in the **pre-opening** phase. First customer: **Crudo Santo** (Closter, NJ). May become SaaS later; build for one restaurant until a second customer forces generalization.
+
+## Source of truth
+
+- **ROADMAP.md** — scope, phases, and phase boundaries. **Never build ahead of the current phase.**
+- **DECISIONS.md** — architectural choices. **Read before changing architecture.** When adding decisions, **append** — do not rewrite history.
+- **SCHEMA.md** — database schema (populated in Phase 1a+). Update when migrations change.
+
+## Current phase
+
+**Phase 0 is complete.** Moving to **Phase 1a** (Supabase schema + RLS). No recipe UI or testing features until the schema is in place.
+
+## Core principles (ROADMAP §2)
+
+1. **Organic in, structured out.** Capture during testing is free-form; structure is applied at finalize.
+2. **Fit the existing workflow, don't replace it.** Chefs weigh, scribble, photograph — the app contains that.
+3. **Recipes reference recipes.** Sub-recipes are first-class.
+4. **Approved recipes are immutable references.** No building on non-approved foundations.
+5. **Version everything.** Never overwrite; promote versions to approved.
+6. **Mobile for capture, desktop for cleanup.** Same responsive app; native later if ever.
+7. **Build for one restaurant.** Generalize only when forced by a second customer.
+
+## Stack (easy to get wrong)
+
+- **Next.js 16** — session refresh uses **`src/proxy.ts`** and `export async function proxy()`, **not** `middleware.ts`.
+- **Tailwind v4** — no `tailwind.config` for shadcn; theme in `src/app/globals.css`.
+- **shadcn/ui** — `radix-nova` preset, **neutral** base, CSS variables; components under `src/components/ui/`.
+- **Supabase** — `@supabase/supabase-js` + `@supabase/ssr`; server client uses **async** `cookies()` from `next/headers`.
+- **Auth** — **magic link only** (email OTP via `signInWithOtp`); no passwords in Phase 0+. Callback: `/auth/callback`; sign-out: **POST** `/auth/signout`.
+
+## Anti-patterns (ROADMAP §5)
+
+- Building Phase 4 features in Phase 1 because they sound cool.
+- Generalizing for "future restaurants" when only Crudo Santo is using it.
+- Forcing structure on the testing capture flow.
+- Building a master ingredient database before the data builds itself.
+- AI features in v1 — they are a Phase 6 thing.
+
+## Naming
+
+- **Display name:** Recipe Tester (UI, docs).
+- **npm package:** `recipe-tester` (do not rename without explicit request).
+- Final product name TBD — do not propose renames unless asked.
