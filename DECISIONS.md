@@ -30,6 +30,7 @@ Log of meaningful design choices. AI agents and contributors should read this al
 - **Denormalized `restaurant_id` on every table.** Auto-populated by BEFORE INSERT triggers from the parent row. RLS policies use this column uniformly.
 - **Approval rules enforced at the DB layer via triggers,** not application code. Sub-recipes must be approved; un-approving with dependents requires `force_unapprove_recipe_version()`.
 - **TypeScript types** in `src/lib/supabase/database.types.ts` are generated. Regenerate with `npx supabase gen types typescript --linked` after any schema change.
+- **`handle_new_restaurant` trigger no-ops when `auth.uid()` is null.** Dashboard-created restaurants (SQL editor as postgres) do not auto-get an owner row — caller must insert `restaurant_members` manually. Authenticated app calls always have `auth.uid()` and behave normally.
 
 ---
 
