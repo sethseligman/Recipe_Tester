@@ -1,8 +1,20 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { MenuDetail, type SectionWithDishes } from "@/app/r/[slug]/menus/[menuId]/menu-detail"
 import { createClient } from "@/lib/supabase/server"
+import type { Tables } from "@/lib/supabase/database.types"
 
-export default async function MenuDetailPlaceholderPage({
+type DishRow = Pick<
+  Tables<"dishes">,
+  "id" | "name" | "menu_description" | "position" | "is_archived"
+>
+
+type SectionRow = Tables<"sections"> & {
+  dishes: DishRow[] | null
+}
+
+export default async function MenuDetailPage({
   params,
 }: {
   params: Promise<{ slug: string; menuId: string }>
@@ -12,7 +24,7 @@ export default async function MenuDetailPlaceholderPage({
 
   const { data: menu } = await supabase
     .from("menus")
-    .select("name")
+    .select("id, name")
     .eq("id", menuId)
     .single()
 
@@ -20,17 +32,28 @@ export default async function MenuDetailPlaceholderPage({
     notFound()
   }
 
+  const { data: sectionsRaw } = await supabase
+    .from("sections")
+    .select("*, dishes(id, name, menu_description, position, is_archived)")
+    .eq("menu_id", menuId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true })
+
+  const sections: SectionWithDishes[] = ((sectionsRaw ?? []) as SectionRow[]).map(
+    (section) => ({
+      ...section,
+      dishes: (section.dishes ?? [])
+        .filter((dish) => !dish.is_archived)
+        .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name)),
+    })
+  )
+
   return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">{menu.name}</h1>
-      <p className="mt-2 text-muted-foreground">
-        Sections and dishes are coming in the next step.
-      </p>
-      <p className="mt-4 text-sm">
-        <a href={`/r/${slug}`} className="text-primary hover:underline">
-          ← Back to menus
-        </a>
-      </p>
-    </div>
+    <MenuDetail
+      slug={slug}
+      menuId={menuId}
+      menuName={menu.name}
+      sections={sections}
+    />
   )
 }
