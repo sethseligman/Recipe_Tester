@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation"
 
+import { OnboardingForm } from "@/app/onboarding/onboarding-form"
 import { createClient } from "@/lib/supabase/server"
 
-export default async function HomePage() {
+export default async function OnboardingPage() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -14,18 +15,19 @@ export default async function HomePage() {
 
   const { data: memberships } = await supabase
     .from("restaurant_members")
-    .select("restaurant_id, restaurants(slug)")
+    .select("restaurants(slug)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true })
+    .limit(1)
 
-  if (!memberships?.length) {
-    redirect("/onboarding")
+  const slug = memberships?.[0]?.restaurants?.slug
+  if (slug) {
+    redirect(`/r/${slug}`)
   }
 
-  const firstSlug = memberships[0].restaurants?.slug
-  if (!firstSlug) {
-    redirect("/onboarding")
-  }
-
-  redirect(`/r/${firstSlug}`)
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
+      <OnboardingForm />
+    </div>
+  )
 }
