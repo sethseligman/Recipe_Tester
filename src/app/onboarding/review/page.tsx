@@ -1,14 +1,8 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ChevronLeftIcon } from "lucide-react"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { MenuReview } from "@/app/onboarding/review/menu-review"
+import { parseMenuFromStorage } from "@/lib/menu-parse/parse-from-storage"
+import { treeToDraft, type DraftMenuTree } from "@/lib/menu-parse/types"
 import { createClient } from "@/lib/supabase/server"
 
 type ReviewPageProps = {
@@ -53,57 +47,33 @@ export default async function OnboardingReviewPage({ searchParams }: ReviewPageP
     redirect("/onboarding/upload")
   }
 
-  const sourceLabel =
-    source === "paste" ? "Pasted text" : "Uploaded file"
+  const sourceMode = source === "paste" ? "paste" : "file"
+
+  let initialTree: DraftMenuTree | null = null
+  let initialParseError: string | null = null
+
+  try {
+    const parsed = await parseMenuFromStorage(
+      supabase,
+      storagePath,
+      sourceMode
+    )
+    initialTree = treeToDraft(parsed)
+  } catch (err) {
+    initialParseError =
+      err instanceof Error ? err.message : "Could not parse menu."
+  }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg">
-        <div className="mb-6">
-          <Link
-            href="/onboarding/upload"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeftIcon className="size-4" />
-            Back to upload
-          </Link>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Review your menu</CardTitle>
-            <CardDescription>
-              Phase A, chunk 2: AI parsing and an editable menu tree come next.
-              Your upload is stored and ready.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 text-sm">
-            <dl className="grid gap-2 rounded-lg border bg-muted/30 p-4">
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Restaurant</dt>
-                <dd className="font-medium text-right">{decodeURIComponent(name)}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">URL</dt>
-                <dd className="font-mono text-right">/r/{decodeURIComponent(slug)}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Source</dt>
-                <dd className="text-right">{sourceLabel}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Upload ID</dt>
-                <dd className="font-mono text-xs text-right break-all">{uploadId}</dd>
-              </div>
-            </dl>
-            <p className="text-muted-foreground">
-              Next step: parse this menu with the Anthropic API, show an editable
-              tree of menus → sections → dishes, then confirm to create your
-              restaurant.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="flex flex-1 flex-col items-center px-4 py-12">
+      <MenuReview
+        storagePath={storagePath}
+        source={sourceMode}
+        initialName={decodeURIComponent(name)}
+        initialSlug={decodeURIComponent(slug)}
+        initialTree={initialTree}
+        initialParseError={initialParseError}
+      />
     </div>
   )
 }

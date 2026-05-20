@@ -98,12 +98,12 @@ The following is already on `main` and working. v2 builds on top of it; nothing 
 - [x] Rewrite onboarding: replace "create blank restaurant" with "upload your menu" as the primary flow
 - [x] Upload UI: drag-and-drop or file picker for PDF/image; paste-text alternative; restaurant name + slug entered alongside
 - [x] Supabase Storage bucket for menu uploads (private, RLS-restricted per-user path until restaurant exists)
-- [ ] Server-side parser:
+- [x] Server-side parser:
   - PDF → text extraction (pdf-parse or equivalent)
   - Image → vision pass (Anthropic API)
   - LLM with structured-output prompt returning JSON: `{ restaurant: {name, slug}, menus: [{ name, sections: [{ name, dishes: [{ name, menu_description }] }] }] }`
-- [ ] Review UI: editable tree of the parsed structure; user fixes mis-parses, adds/removes/reorders, then confirms
-- [ ] Confirm → transactional insert; restaurant created with current user as owner
+- [x] Review UI: editable tree of the parsed structure; user fixes mis-parses, adds/removes/reorders, then confirms
+- [x] Confirm → transactional insert; restaurant created with current user as owner
 - [ ] Existing-user variant: "Upload a menu" available from inside the app for new menu versions
 - [ ] Fallback: "Start blank" creates an empty restaurant (the current onboarding flow, kept as backup)
 
