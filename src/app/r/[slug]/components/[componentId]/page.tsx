@@ -1,7 +1,9 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { RecipeVersionsSection } from "@/app/r/[slug]/components/[componentId]/recipe-versions-section"
 import { createClient } from "@/lib/supabase/server"
+import type { Tables } from "@/lib/supabase/database.types"
 
 export default async function ComponentDetailPage({
   params,
@@ -21,6 +23,12 @@ export default async function ComponentDetailPage({
     notFound()
   }
 
+  const { data: versions } = await supabase
+    .from("recipe_versions")
+    .select("*")
+    .eq("component_id", componentId)
+    .order("version_number", { ascending: false })
+
   return (
     <div>
       <p className="mb-4 text-sm">
@@ -33,13 +41,15 @@ export default async function ComponentDetailPage({
       </p>
       <h1 className="text-2xl font-semibold tracking-tight">{component.name}</h1>
       {component.description ? (
-        <p className="mt-2 max-w-prose text-sm text-muted-foreground whitespace-pre-wrap">
+        <p className="mt-2 max-w-prose text-sm whitespace-pre-wrap text-muted-foreground">
           {component.description}
         </p>
       ) : null}
-      <p className="mt-6 text-muted-foreground">
-        Recipe versions and ingredients are coming in the next step.
-      </p>
+      <RecipeVersionsSection
+        slug={slug}
+        componentId={componentId}
+        versions={(versions ?? []) as Tables<"recipe_versions">[]}
+      />
     </div>
   )
 }
