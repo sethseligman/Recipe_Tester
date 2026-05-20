@@ -50,33 +50,6 @@ function isUniqueViolation(error: { code?: string }): boolean {
   return error.code === "23505"
 }
 
-async function assertRestaurantMember(restaurantId: string): Promise<{
-  error?: string
-  userId?: string
-}> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { error: "You must be signed in." }
-  }
-
-  const { data: membership } = await supabase
-    .from("restaurant_members")
-    .select("id")
-    .eq("restaurant_id", restaurantId)
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (!membership) {
-    return { error: "You do not have access to this restaurant." }
-  }
-
-  return { userId: user.id }
-}
-
 async function loadRestaurantIngredients(restaurantId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -106,9 +79,13 @@ export async function createIngredient(
   const { restaurantId, name, description, slug, confirmCreate } = parsed.data
   const formData: IngredientFormData = { name, description }
 
-  const memberCheck = await assertRestaurantMember(restaurantId)
-  if (memberCheck.error) {
-    return { error: memberCheck.error }
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "You must be signed in." }
   }
 
   if (!confirmCreate) {
@@ -122,14 +99,13 @@ export async function createIngredient(
     }
   }
 
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from("ingredients")
     .insert({
       restaurant_id: restaurantId,
       name: name.trim(),
       description: normalizeDescription(description),
-      created_by: memberCheck.userId ?? null,
+      created_by: user.id,
     })
     .select("id, name")
     .single()
@@ -161,19 +137,14 @@ export async function updateIngredient(
   const formData: IngredientFormData = { name, description }
 
   const supabase = await createClient()
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("ingredients")
     .select("restaurant_id")
     .eq("id", ingredientId)
     .single()
 
-  if (!existing) {
+  if (existingError || !existing) {
     return { error: "Ingredient not found." }
-  }
-
-  const memberCheck = await assertRestaurantMember(existing.restaurant_id)
-  if (memberCheck.error) {
-    return { error: memberCheck.error }
   }
 
   if (!confirmCreate) {
@@ -219,19 +190,14 @@ export async function deleteIngredient(
   const { ingredientId, slug } = parsed.data
   const supabase = await createClient()
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("ingredients")
     .select("restaurant_id, name")
     .eq("id", ingredientId)
     .single()
 
-  if (!existing) {
+  if (existingError || !existing) {
     return { error: "Ingredient not found." }
-  }
-
-  const memberCheck = await assertRestaurantMember(existing.restaurant_id)
-  if (memberCheck.error) {
-    return { error: memberCheck.error }
   }
 
   const { count, error: countError } = await supabase

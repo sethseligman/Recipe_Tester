@@ -85,25 +85,14 @@ async function assertVersionAccess(versionId: string): Promise<
     return { error: "You must be signed in." }
   }
 
-  const { data: version } = await supabase
+  const { data: version, error: versionError } = await supabase
     .from("recipe_versions")
     .select("id, component_id, restaurant_id, status, version_number")
     .eq("id", versionId)
     .single()
 
-  if (!version) {
+  if (versionError || !version) {
     return { error: "Recipe version not found." }
-  }
-
-  const { data: membership } = await supabase
-    .from("restaurant_members")
-    .select("id")
-    .eq("restaurant_id", version.restaurant_id)
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (!membership) {
-    return { error: "You do not have access to this restaurant." }
   }
 
   return { userId: user.id, version }
@@ -122,25 +111,14 @@ async function assertComponentAccess(componentId: string): Promise<
     return { error: "You must be signed in." }
   }
 
-  const { data: component } = await supabase
+  const { data: component, error: componentError } = await supabase
     .from("components")
     .select("restaurant_id")
     .eq("id", componentId)
     .single()
 
-  if (!component) {
+  if (componentError || !component) {
     return { error: "Component not found." }
-  }
-
-  const { data: membership } = await supabase
-    .from("restaurant_members")
-    .select("id")
-    .eq("restaurant_id", component.restaurant_id)
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (!membership) {
-    return { error: "You do not have access to this restaurant." }
   }
 
   return { userId: user.id, restaurantId: component.restaurant_id }
