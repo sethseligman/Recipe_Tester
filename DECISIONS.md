@@ -40,7 +40,16 @@ Log of meaningful design choices. AI agents and contributors should read this al
 - **Cross-restaurant guards:** ingredients and sub-recipes referenced from `recipe_ingredients` must belong to the same restaurant as the parent recipe. Enforced by triggers.
 - **`method` (recipe instructions) remains free-form markdown** — explicitly not normalized in v1. `prep_note` remains free text with UI suggestion list to come in Phase 1c.
 
-- **Ingredients master table (`e6fbf2a`) ships ahead of its UI by design.** The DB schema for ingredients + `unit_type` + cross-restaurant guards landed during Phase 1a follow-up so that recipe-version UI in Phase 1c can be built against a correct schema rather than retrofit later. Until ingredients UI lands (Phase 1c Chunk A), the `ingredients` table has no app-level surface.
+- **Ingredients master table (`e6fbf2a`) ships ahead of its UI by design.** The DB schema for ingredients + `unit_type` + cross-restaurant guards landed during Phase 1a follow-up so that recipe work could be built against a correct schema rather than retrofit later. Ingredients master UI is now on `main` (Phase 1c Chunk A).
+
+## Roadmap v2 pivot (May 19, 2026)
+
+- **ROADMAP.md is now v2.** v1 archived as `ROADMAP-v1-archived.md`. Do not start a greenfield repo — auth, schema, RLS, triggers, and CRUD on `main` are kept.
+- **Product wedge moves to AI-assisted capture** (menu upload Phase A, recipe capture Phase B), not manual structured entry first.
+- **UX re-center:** dishes and recipes are primary; `components` / `recipe_versions` remain in the DB but move to the background. Components tab and component-centric version UI are deprecated in favor of dish-first flows (Phase B).
+- **v1 Phase 1c Chunks C/D cancelled** (ingredient lines + sub-recipe UI on component version pages). Superseded by Phase B capture/review on the dish.
+- **Membership in server actions:** rely on **RLS** (`is_restaurant_member` via JWT on inserts/selects/updates), matching `components/actions.ts`. Do **not** query `restaurant_members` directly in actions — that pattern falsely denied access (`970bb58` fix).
+- **Phase order:** A (menu upload) → B (recipe capture + UI re-center) → C (dashboard + collaboration) → D+ (testing, cards, costing, FOH, productization).
 
 ---
 

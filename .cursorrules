@@ -4,32 +4,44 @@
 
 Recipe development and testing platform for restaurants in the **pre-opening** phase. First customer: **Crudo Santo** (Closter, NJ). May become SaaS later; build for one restaurant until a second customer forces generalization.
 
+**v2 pivot (May 2026):** Capture-first product — menu/recipe upload + AI parse + human review. Chef-centric UX (dishes, recipes, dashboard). Schema machinery (versions, components, approval) stays in the background.
+
 ## Source of truth
 
 - **ROADMAP.md** — scope, phases, and phase boundaries. **Never build ahead of the current phase.**
+- **ROADMAP-v1-archived.md** — historical v1 plan only; do not follow for new work.
 - **DECISIONS.md** — architectural choices. **Read before changing architecture.** When adding decisions, **append** — do not rewrite history.
 - **SCHEMA.md** — database schema (populated in Phase 1a+). Update when migrations change.
 
 ## Current phase
 
-**Current phase status:**
+**Active: Phase A — Menu Upload** (see ROADMAP.md §6)
 
-- Phase 0: complete (auth, magic link, sign-out)
-- Phase 1a: complete (initial schema, RLS, approval triggers)
-- Phase 1a follow-up: complete (ingredients master table, unit_type enum)
-- Phase 1b: complete (restaurants, menus, sections, dishes — full CRUD)
-- Phase 1c partial: complete for components + dish-component linking
-- Phase 1c remaining (in progress): ingredients master UI, recipe_versions UI, recipe_ingredients UI, sub-recipe references, status workflow
+**Foundation on `main` (do not rebuild):**
 
-## Core principles (ROADMAP §2)
+- Phase 0: auth (magic link, sign-out, `src/proxy.ts`)
+- Phase 1a: schema, RLS, approval triggers, force-unapprove
+- Phase 1a follow-up: ingredients master, `unit_type` enum
+- Phase 1b: restaurants, menus, sections, dishes CRUD
+- Phase 1c (partial): components library, dish linking, recipe versions UI (component-centric), ingredients master UI
 
-1. **Organic in, structured out.** Capture during testing is free-form; structure is applied at finalize.
-2. **Fit the existing workflow, don't replace it.** Chefs weigh, scribble, photograph — the app contains that.
-3. **Recipes reference recipes.** Sub-recipes are first-class.
-4. **Approved recipes are immutable references.** No building on non-approved foundations.
-5. **Version everything.** Never overwrite; promote versions to approved.
-6. **Mobile for capture, desktop for cleanup.** Same responsive app; native later if ever.
-7. **Build for one restaurant.** Generalize only when forced by a second customer.
+**Do not build (v1 tail — superseded by v2 Phase B):**
+
+- Component-centric `recipe_ingredients` UI (v1 Chunks C/D)
+- Further investment in Components tab / version list as primary recipe UX
+
+**Next milestones:** Phase A → Phase B → Phase C (see ROADMAP.md)
+
+## Core principles (ROADMAP §4)
+
+1. **The app comes to the chef.** Capture is loose; structure at review.
+2. **Recipes are first-class. Versions are history.** Edit "Adobo," not "Adobo v3."
+3. **The dashboard is the front door.** Home shows work state, not menu hierarchy.
+4. **Approved recipes are immutable references.** UI hides the machinery.
+5. **Sub-recipes are emergent.** Referenced recipes become bases; no separate registration step.
+6. **AI assists, the chef approves.** Every parse gets human review before commit.
+7. **Collaboration is a pillar** (Phase C), not late polish.
+8. **Build for one restaurant** until forced to generalize.
 
 ## Stack (easy to get wrong)
 
@@ -37,15 +49,18 @@ Recipe development and testing platform for restaurants in the **pre-opening** p
 - **Tailwind v4** — no `tailwind.config` for shadcn; theme in `src/app/globals.css`.
 - **shadcn/ui** — `radix-nova` preset, **neutral** base, CSS variables; components under `src/components/ui/`.
 - **Supabase** — `@supabase/supabase-js` + `@supabase/ssr`; server client uses **async** `cookies()` from `next/headers`.
-- **Auth** — **magic link only** (email OTP via `signInWithOtp`); no passwords in Phase 0+. Callback: `/auth/callback`; sign-out: **POST** `/auth/signout`.
+- **Auth** — **magic link only** (email OTP via `signInWithOtp`); no passwords. Callback: `/auth/callback`; sign-out: **POST** `/auth/signout`.
+- **Server actions** — enforce access via **RLS on target tables**, not explicit `restaurant_members` queries (see DECISIONS.md).
 
-## Anti-patterns (ROADMAP §5)
+## Anti-patterns (ROADMAP §8)
 
-- Building Phase 4 features in Phase 1 because they sound cool.
-- Generalizing for "future restaurants" when only Crudo Santo is using it.
-- Forcing structure on the testing capture flow.
-- Building a master ingredient database before the data builds itself.
-- AI features in v1 — they are a Phase 6 thing.
+- Building Phase F+ features in Phase A/B because they sound cool.
+- Centering schema in the UI (components, v1/v2/v3 as primary nouns).
+- Deferring AI parsing — the parser is the wedge.
+- Treating collaboration as polish.
+- Generalizing for future restaurants while only Crudo Santo uses it.
+- Finishing v1 component-centric recipe ingredient UI when Phase B supersedes it.
+- Explicit `restaurant_members` membership checks in server actions (use RLS like `components/actions.ts`).
 
 ## Naming
 

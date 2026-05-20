@@ -1,279 +1,286 @@
-# Recipe Testing Platform — Roadmap & Product Outline
+# Recipe Tester — Roadmap
 
-**Working name:** TBD (display name during build: Recipe Tester)
-**First customer:** Crudo Santo (Closter, NJ)
-**Built by:** Solo dev using Cursor / Claude Code, with AI pair-programming
+**Status:** v2 (current). **Last updated:** May 19, 2026. **Working name:** Recipe Tester. Final product name TBD. **First customer:** Crudo Santo (Closter, NJ). **Built by:** Solo dev with AI pair-programming (Cursor / Claude Code).
+
+*v1 roadmap: [ROADMAP-v1-archived.md](./ROADMAP-v1-archived.md)*
 
 ---
 
 ## 1. Product Vision
 
-A recipe development and testing platform for restaurants in the pre-opening / menu-development phase. Captures the messy work of testing dishes — photos, notes, weights, iterations — and turns it into structured, versioned, reusable recipes that feed line training, recipe cards, and (eventually) costing.
+A menu and recipe development platform for restaurants in the pre-opening and iteration phase. Meets chefs where their work actually happens — a photo of a handwritten sheet, a paste from a doc, a snap of a printed menu — and absorbs that into structured, versioned, collaborative recipes. A dashboard, not a database, is the front door.
 
-**Wedge:** Existing restaurant software (MarketMan, Margin Edge, MarginEdge, etc.) is built for operations *after* recipes are locked. Nothing serves the pre-opening recipe-testing phase well. Chefs use notebooks, Google Docs, Slack threads, and photo dumps. This is the gap.
+**The wedge:** Other tools (Meez, MarketMan, MarginEdge) treat recipe entry as structured data the chef must produce. This tool inverts that: capture is loose, structure is applied with AI assistance and human review. The chef writes the way they already write. The app does the conversion.
 
-**Long-term ambition:** Recipe testing → recipe management → costing → FOH training → menu engineering. Each is its own product. We build them in order, earning each one.
-
----
-
-## 2. Core Principles
-
-These shape every feature decision. Refer back when scope-creep starts.
-
-1. **Organic in, structured out.** Capture during testing is free-form (photos, voice, typed notes). Structure is applied at the "finalize" step.
-2. **Fit the existing workflow, don't replace it.** Chefs weigh, scribble, photograph. The app contains that, doesn't fight it.
-3. **Recipes reference recipes.** Sub-recipes are first-class. A leche de tigre is a real thing, used by multiple dishes.
-4. **Approved recipes are immutable references.** You can't build a recipe on a foundation that isn't locked. Forces discipline matching how kitchens actually work.
-5. **Version everything.** Never overwrite. v1, v2, v3. Promote a version to "approved" when it's the one.
-6. **Mobile for capture, desktop for cleanup.** Same app, responsive. Native later if ever.
-7. **Build for one restaurant. Generalize only when forced to by a second.** Crudo Santo is the customer until something says otherwise.
+**Long-term ambition:** menu development → testing loop → recipe cards → costing → FOH training → menu engineering. Each is its own product. We build them in order, earning each one.
 
 ---
 
-## 3. Phase Roadmap
+## 2. Why this rewrite
 
-### Phase 0 — Foundation (Week 1)
+The v1 roadmap centered the *schema* in the chef's experience: components, recipe versions, sub-recipe references, status transitions. The model is structurally clean and supports a SaaS future, but it's not how a chef thinks about their work.
 
-**Goal:** Empty app deployed, auth works, can sign in.
+A chef thinks: "I have a menu. I work on dishes. The dishes have recipes. Sometimes a recipe reuses another (the leche de tigre). I iterate until it's right; if something changes meaningfully, it's Adobo 2.0."
 
-- [ ] Repo set up (Next.js 14+ App Router, TypeScript, Tailwind)
-- [ ] Supabase project created (Postgres, Auth, Storage)
-- [ ] Supabase client wired up (server + client components)
-- [ ] Auth: email magic link sign-in
-- [ ] Deployed to Vercel, accessible at a real URL
-- [ ] Basic layout: top nav, signed-in/signed-out states
-- [ ] Environment variables documented in README
+A chef does NOT think: "I have components. Each component has a list of recipe_versions in draft / testing / approved / archived status. I'm editing v3."
 
-**Definition of done:** You can sign up, sign in, sign out. App is on the internet. Nothing else.
+v2 keeps the model that supports versioning, sub-recipes, and immutability of approved work — but pushes it to the background. The chef sees recipes, dishes, and a dashboard of the work. The mechanisms are invisible until invoked.
 
-**Cut if needed:** Nothing. This phase doesn't get cut.
+The other shift: AI-assisted capture (menu upload, recipe upload) moves from "Phase 6, someday" to **the wedge**. Without it, the app is a fancier Google Doc. With it, the app meets the chef's actual workflow on day one.
 
 ---
 
-### Phase 1 — Recipe Book (Weeks 2–3)
+## 3. What stays, what changes, what's new
 
-**Goal:** Crudo Santo's menu lives in the app. You can create recipes with sub-recipe references. No testing features yet.
+**Stays — real foundation, no rework needed:**
 
-#### Data model
+- Auth (magic link), Supabase, Next.js 16, RLS policies
+- Restaurants / menus / sections / dishes schema and CRUD
+- Ingredients master table + canonical `unit_type` enum
+- Approval triggers, sub-recipe constraints, force-unapprove escape hatch
+- Versioning machinery (kept; pushed to background)
 
-Build these tables in Supabase with RLS policies (users can only see/edit data for restaurants they're a member of):
+**Changes — UI re-centering:**
 
-- `restaurants`
-- `restaurant_members` (user_id, restaurant_id, role)
-- `menus`
-- `sections`
-- `dishes`
-- `components`
-- `dish_components` (join table)
-- `recipe_versions`
-- `recipe_ingredients` (with optional `sub_recipe_version_id`)
+- "Components" disappears from the main navigation. A leche de tigre is a recipe that happens to be used by other recipes. Filterable as "used as a sub-recipe," not a top-level concept.
+- "Recipe versions" stops being a noun the chef sees. Editing a recipe edits the recipe; history is automatic. Explicit forking ("Save as Adobo 2.0") is a deliberate act with a clear name.
+- Dish detail page becomes the recipe page, not a list of component links.
+- Onboarding stops creating a blank restaurant. It starts with "upload your menu."
 
-#### Features
+**New — the real product:**
 
-- [ ] Create a restaurant; user becomes owner
-- [ ] Create / rename / archive menus
-- [ ] Create sections within a menu, drag to reorder
-- [ ] Create dishes within sections, with menu description
-- [ ] Create components (reusable across dishes)
-- [ ] Link components to dishes (with role: base / protein / garnish / etc)
-- [ ] Create a recipe version for a component
-  - Title, yield, method (markdown textarea)
-  - Ingredient list: name, qty, unit, prep note
-  - Add sub-recipe row: only `approved` recipe versions selectable
-- [ ] Version control: new version creates a copy, never overwrites
-- [ ] Status workflow: draft → testing → approved → archived
-- [ ] Cannot approve a recipe if it depends on non-approved sub-recipes (DB constraint + UI prevention)
-- [ ] Cannot un-approve a recipe that other approved recipes depend on (with "force un-approve" escape hatch)
-- [ ] Recipe view: ingredient list shows sub-recipes inline-expandable
-- [ ] Bulk import: paste menu text into a textarea, parses into sections + dish stubs (low-tech, just regex/heuristics for now)
-
-#### Out of scope this phase
-
-- Test sessions
-- Photo uploads
-- Recipe cards / print view
-- Costing
-- Anything AI
-
-**Definition of done:** Crudo Santo's full menu from the brief is entered. Leche de tigre exists as a component with an approved v1 recipe. Ceviche references it as a sub-recipe.
-
-**Cut if needed:** Drag-to-reorder, bulk import. Both can be manual.
+- Menu upload + parse + review (Phase A)
+- Recipe capture from photo / upload / paste + parse + review (Phase B)
+- Dashboard-as-home (Phase C)
+- Comments, sign-off, activity feed (Phase C)
 
 ---
 
-### Phase 2 — Testing Loop (Weeks 4–5)
+## 4. Core Principles (revised)
 
-**Goal:** You can run a test session on a dish or component, capture what happened, and use it to create the next recipe version.
-
-#### Data model additions
-
-- `test_sessions`
-- `session_entries` (chronological stream: photo / text / measurement / voice-later)
-- Supabase Storage bucket for session photos
-
-#### Features
-
-- [ ] Start a test session from a dish or component page
-- [ ] Session is open until you close it; multiple sessions can be open
-- [ ] Within a session, add entries:
-  - [ ] Photo (camera or upload)
-  - [ ] Quick text note
-  - [ ] Ingredient + weight measurement (qty + unit)
-  - [ ] (Voice note: deferred to Phase 3 unless quick)
-- [ ] Entries are timestamped, chronological, captioned
-- [ ] Close session with a verdict: keep / iterate / scrap / inconclusive + summary note
-- [ ] Session history view: see all sessions for a dish or component
-- [ ] "Create new recipe version from this session" action:
-  - Pre-fills a new recipe_version draft
-  - Pulls measurements from session entries into ingredient list (best-effort)
-  - Links the session as the origin of the version
-- [ ] Recipe version page shows linked sessions
-- [ ] Mobile-friendly capture flow: large buttons, camera-first, minimal typing
-
-#### Out of scope this phase
-
-- AI photo → recipe parsing
-- Cross-session comparison views
-- Tasting panel / multi-user verdicts
-
-**Definition of done:** You run a real test on leche de tigre at Mykos, capture it in the app on your phone, and turn it into v2 of the recipe.
-
-**Cut if needed:** Voice notes (defer), measurement-to-ingredient auto-fill (manual is fine).
+1. **The app comes to the chef.** Capture matches the existing workflow — paper, photos, voice, paste. Structure is applied at review, not at entry.
+2. **Recipes are first-class. Versions are history.** The chef edits "Adobo," not "Adobo v3." Versions exist for compare / rollback / fork but aren't the primary unit of interaction.
+3. **The dashboard is the front door.** Home shows the state of the work, not the menu hierarchy. Hierarchy is for organization, not navigation.
+4. **Approved recipes are immutable references.** (Unchanged from v1. The rule survives; the UI hides the machinery.)
+5. **Sub-recipes are emergent, not declared.** A recipe becomes a base recipe by being referenced. There's no separate "components" registration step.
+6. **AI assists, the chef approves.** Every parse — menu, recipe, ingredient — gets a human review before it becomes data.
+7. **Collaboration is a pillar, not an add-on.** Sous chef posts, head chef signs off, the kitchen sees the same state. Phase C, not Phase 8.
+8. **Build for one restaurant until forced to generalize.** Crudo Santo is the customer until something says otherwise.
 
 ---
 
-### Phase 3 — Recipe Cards & Polish (Weeks 6–7)
+## 5. Current Build State
 
-**Goal:** The app produces usable output — printable recipe cards, a clean dish view for line training, and a recipe book for the kitchen.
+The following is already on `main` and working. v2 builds on top of it; nothing gets thrown away.
 
-#### Features
+- Auth: magic link sign-in, sign-out, session refresh via `src/proxy.ts`
+- Restaurants, menus, sections, dishes — full CRUD with archive/restore
+- Sub-nav: Menus / Components / Ingredients *(Components tab removed in Phase B)*
+- Components library + dish-component linking *(schema kept; UI re-homed under the dish in Phase B)*
+- Recipe versions UI on the component detail page *(functional but mis-centered; replaced in Phase B)*
+- Ingredients master UI with near-match warnings, `unit_type` dropdown
+- Full schema: Phase 1a + ingredients/units follow-up
+- RLS policies on all tables; approval triggers; force-unapprove function
 
-- [ ] Recipe card view: clean, printable, single dish
-  - Dish name, menu description, plating photo
-  - Components listed in build order
-  - Each component: ingredient list, method, yield
-  - Sub-recipes expanded or cross-referenced
-- [ ] Print stylesheet (PDF export via browser print is fine for v1)
-- [ ] "Kitchen book" view: full menu, all approved recipes, browsable
-- [ ] Plating photo: designate one session photo as the canonical plating shot for a dish
+**Do not build (v1 tail — superseded by v2):**
+
+- Component-centric `recipe_ingredients` UI (v1 Phase 1c Chunks C/D)
+- Further polish on the Components tab / version list as primary recipe UX
+
+---
+
+## 6. Phase Roadmap (v2)
+
+### Phase A — Menu Upload (the new front door)
+
+**Goal:** A new user signs in, uploads a menu (PDF, image, or pasted text), reviews the AI-parsed result, and lands in their app with a real restaurant + menus + sections + dishes in place. Time from sign-in to populated app: under 5 minutes for a typical menu.
+
+- [ ] Rewrite onboarding: replace "create blank restaurant" with "upload your menu" as the primary flow
+- [ ] Upload UI: drag-and-drop or file picker for PDF/image; paste-text alternative; restaurant name + slug entered alongside
+- [ ] Supabase Storage bucket for menu uploads (private, RLS-restricted to restaurant members)
+- [ ] Server-side parser:
+  - PDF → text extraction (pdf-parse or equivalent)
+  - Image → vision pass (Anthropic API)
+  - LLM with structured-output prompt returning JSON: `{ restaurant: {name, slug}, menus: [{ name, sections: [{ name, dishes: [{ name, menu_description }] }] }] }`
+- [ ] Review UI: editable tree of the parsed structure; user fixes mis-parses, adds/removes/reorders, then confirms
+- [ ] Confirm → transactional insert; restaurant created with current user as owner
+- [ ] Existing-user variant: "Upload a menu" available from inside the app for new menu versions
+- [ ] Fallback: "Start blank" creates an empty restaurant (the current onboarding flow, kept as backup)
+
+**Definition of done:** Take a real printed menu (PDF or photo), upload it, get a recognizable restaurant scaffold in under 5 minutes with at most light editing.
+
+**Cut if needed:** Reorder in the review UI. Manual reordering after-the-fact is fine.
+
+---
+
+### Phase B — Recipe Capture & UI Re-center (the wedge)
+
+**Goal:** From a dish detail page, capture a recipe by photo / upload / paste / typing. AI parses into structured form: ingredients matched against the master list with qty / unit / prep_note, method as markdown. User reviews, edits, approves. The dish has a recipe.
+
+This phase also does the **UI re-center**: dish page becomes the recipe page, the Components tab disappears, recipe versions stop being the primary noun.
+
+- [ ] Remove Components tab from the main sub-nav
+- [ ] Redesign dish detail page: recipe lives here, not a list of component links
+- [ ] "Add recipe" action on a dish opens the capture flow with source choices:
+  - Take photo (mobile camera)
+  - Upload image / PDF / doc
+  - Paste text
+  - Start blank (type from scratch)
+- [ ] Server-side recipe parser:
+  - Image/PDF → OCR + LLM (or vision + LLM)
+  - JSON output: `{ title?, yield_amount?, yield_unit?, ingredients: [{ candidate_name, qty, unit, prep_note? }], method }`
+  - Each parsed ingredient fuzzy-matched against the restaurant's master ingredients list; top-3 suggestions surfaced in review
+- [ ] Review UI:
+  - Title, yield amount + unit dropdown
+  - Ingredients table: parsed candidate name + suggested match (top 3) with "use this match" / "create new" actions; qty + unit dropdown + optional prep_note
+  - Method as markdown textarea, pre-filled with parser output
+  - Source photo/doc visible alongside the review (so the chef can cross-check)
+  - Confirm → recipe created on the dish
+- [ ] Sub-recipe references in the review UI: a recipe can reference another recipe in place of an ingredient row (e.g., "200g of leche de tigre")
+- [ ] Background versioning: every save creates a snapshot; chef sees the recipe with a small "History" link, not "v1, v2, v3"
+- [ ] Explicit fork: "Save as new version" — names the fork explicitly ("Adobo 2.0"). Old version archived but reachable.
+- [ ] Status workflow remains in the data layer; surfaced in UI as a single "Mark approved" / "Approved" badge with un-approve as a less-prominent action
+
+**Definition of done:** Take a handwritten recipe sheet, photograph it on phone, upload, get a parsed draft, fix it in about two minutes, save. The recipe lives on the dish. Sub-recipes (leche de tigre referenced inside a ceviche) work.
+
+**Cut if needed:** Voice capture (defer to Phase D). Fork UX polish (basic version is fine).
+
+---
+
+### Phase C — Dashboard & Collaboration
+
+**Goal:** Home stops being the menu tree. It's a dashboard that shows the state of the work and surfaces what needs attention. Sous chef and head chef talk inside the app instead of in Slack.
+
+- [ ] Dashboard at `/r/[slug]` (replaces current menus-list home):
+  - "Awaiting your review" — recipes/dishes a collaborator marked ready
+  - "In progress" — recently-edited drafts or testing-status recipes
+  - "Recently approved"
+  - "Activity" — chronological feed of comments, sign-offs, edits
+  - "Menu progress" — percentage of dishes with approved recipes, per menu
+- [ ] Comments on recipes: thread per recipe; sous chef writes "ready for review," head chef replies / signs off
+- [ ] @mentions in comments → in-app notification stripe
+- [ ] Sign-off flow: "Mark ready for review" by author → visible on reviewer's dashboard
+- [ ] Activity is derived from comments + status changes + edits (no separate "post" entity needed)
+- [ ] Realtime updates via Supabase Realtime (optional polish; periodic refresh acceptable for v1)
+- [ ] Member invite UI (replaces the manual SQL workaround for adding collaborators)
+
+**Definition of done:** Giuseppe signs in, works on the char dish, marks it ready. You see it on your dashboard, sign off, dish moves to "Recently approved." Both of you used the dashboard, not the menu hierarchy, to navigate the work.
+
+**Cut if needed:** Realtime (polling is fine). Mentions notification stripe (visible-in-dashboard suffices).
+
+---
+
+### Phase D — Testing Sessions
+
+**Goal:** Same scope as v1's Phase 2 — capture during testing — but now lives alongside the recipe flow rather than competing with it.
+
+- [ ] Start a test session from a dish or recipe
+- [ ] Session entries: photos, quick notes, ingredient + weight measurements; voice notes if quick
+- [ ] Close session with verdict: keep / iterate / scrap / inconclusive + summary note
+- [ ] "Save this session's notes as the next iteration of [recipe]" feeds into the Phase B capture flow
+- [ ] Designate one session photo as the canonical plating shot for a dish
+
+**Definition of done:** Run a real test on leche de tigre at Mykos, capture in the app on your phone, turn it into the next iteration of the recipe. Photos and notes link to the recipe permanently.
+
+---
+
+### Phase E — Recipe Cards & Kitchen Output
+
+(Same scope as v1's Phase 3.)
+
+- [ ] Printable single-dish recipe card
+- [ ] Full-menu / kitchen-book view
+- [ ] Plating photo on dish card
 - [ ] Search across recipes and ingredients
-- [ ] Recipe diff view: see what changed between v2 and v3
-- [ ] "Dependents" view on a recipe: what other recipes reference this one
-- [ ] Polish pass on mobile capture UX based on real testing usage
+- [ ] Diff view between versions (now that history is preserved automatically)
 
-#### Out of scope this phase
-
-- Costing
-- Allergens
-- FOH materials
-- Sharing / collaboration features beyond restaurant members
-
-**Definition of done:** You print a recipe card for the ceviche, hand it to a line cook at training, and it's usable as-is.
-
-**Cut if needed:** Diff view, "dependents" view. Nice-to-haves.
+**Definition of done:** Print a recipe card for the ceviche, hand it to a line cook at training, usable as-is.
 
 ---
 
-### Phase 4 — Costing & Operations (Post-Opening)
+### Phase F — Costing & Operations
 
-**Goal:** Track what dishes actually cost. Becomes useful only once recipes are stable.
+(v1's Phase 4. Becomes useful only once recipes are stable.)
 
-- [ ] Ingredient master list (auto-builds from usage in Phase 1–3)
-- [ ] Vendor pricing per ingredient (manual entry, CSV import)
+- [ ] Vendor pricing per ingredient, manual entry + CSV import
 - [ ] Yield % per ingredient (whole-to-usable)
-- [ ] Recipe costing: sum of ingredient costs × quantities, rolled up through sub-recipes
+- [ ] Recipe costing rolled up through sub-recipes
 - [ ] Plate cost vs. menu price, target food cost %
 - [ ] Cost drift alerts when ingredient prices change
 - [ ] Basic prep list generator from a service forecast
 
-Not scoped in detail yet. Will plan in detail when we get there.
-
 ---
 
-### Phase 5 — FOH, Allergens, Training (Post-Opening)
+### Phase G — FOH, Allergens, Training
+
+(v1's Phase 5.)
 
 - [ ] Allergen tagging per ingredient, rolled up to recipes and dishes
-- [ ] FOH-facing dish description view: ingredients, allergens, prep style, sourcing notes
-- [ ] Spec sheets per dish for service training
+- [ ] FOH dish description view (ingredients, allergens, prep style, sourcing notes)
+- [ ] Spec sheets per dish
 - [ ] Server quiz / training mode
 
 ---
 
-### Phase 6 — Productization
+### Phase H — Productization
 
-Only triggered if Phase 1–3 succeed at Crudo Santo *and* there's evidence other restaurants want this.
+Only triggered if Phases A–E ship for Crudo Santo *and* other chefs ask to use it.
 
-- [ ] Multi-restaurant signup flow
+- [ ] Multi-restaurant signup
 - [ ] Billing (Stripe)
-- [ ] Onboarding: menu PDF upload → AI parse → editable structure
-- [ ] AI features: photo of handwritten recipe → parsed recipe draft
-- [ ] Templates: starter menus, common component libraries
-- [ ] Public landing page, marketing site
+- [ ] Marketing site, onboarding refinement
+- [ ] Templates: starter menus, common base-recipe libraries
 
 ---
 
-## 4. Tech Stack (Locked)
+## 7. Tech Stack
 
-- **Frontend:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, shadcn/ui for components
-- **Backend:** Supabase (Postgres, Auth, Storage, RLS)
-- **Hosting:** Vercel (frontend) + Supabase Cloud
-- **State:** React Server Components where possible, `useState` / Zustand only where needed
-- **Forms:** `react-hook-form` + `zod`
-- **Image handling:** Supabase Storage + Next.js `<Image>`
-- **Dev tools:** Cursor or Claude Code, GitHub, Vercel preview deploys per PR
+Unchanged from v1 foundation, plus AI/parsing dependencies for Phase A and B.
 
-**Why these:** Supabase covers auth + DB + storage + RLS in one piece. Next.js + Vercel deploys in two clicks. shadcn means you don't fight UI components. This stack is boring and proven, which is what you want when shipping solo.
-
----
-
-## 5. Working Process
-
-### Per-phase rhythm
-
-1. Read the phase goals.
-2. Break into smallest possible PRs (one feature each).
-3. Build, test on real Crudo Santo data, ship.
-4. Move to next item.
-5. End of phase: demo to yourself. Does it pass the "definition of done"? If not, finish before moving on.
-
-### Using Cursor / Claude Code
-
-- Keep this `ROADMAP.md` in the repo root. Reference it in prompts.
-- Keep a `SCHEMA.md` with the current Supabase schema; update when it changes.
-- Keep a `DECISIONS.md` log: every meaningful design choice and why. AI agents reference this to stay consistent.
-- For each feature, write a short spec before coding. "Build X that does Y, here's the data model, here's the UX." Then have the AI implement it.
-- Commit early, commit often. PR per feature.
-
-### Anti-patterns to avoid
-
-- Building Phase 4 features in Phase 1 because they sound cool.
-- Generalizing for "future restaurants" when only Crudo Santo is using it.
-- Forcing structure on the testing capture flow.
-- Building a master ingredient database before the data builds itself.
-- AI features in v1. They're a Phase 6 thing.
+- Next.js 16 (App Router), React 19, TypeScript strict
+- Tailwind v4, shadcn/ui (radix-nova preset, neutral base)
+- Supabase: Postgres, Auth (magic link), Storage, RLS, Realtime (Phase C)
+- @supabase/ssr, `src/proxy.ts` for session refresh
+- react-hook-form + zod for forms; Sonner toasts
+- date-fns, react-markdown
+- **New for v2:** Anthropic API for menu/recipe parsing; `pdf-parse` (or equivalent) for PDF text extraction; vision endpoints for images
 
 ---
 
-## 6. Open Questions to Resolve Before Phase 1
+## 8. Working Process
 
-- [ ] Final product name
-- [ ] Domain
-- [ ] Do you want me (Giuseppe / others) to have access from day one, or is it just you until Phase 2?
-- [ ] Any constraints from the partners about where data lives / IP ownership, given this might become a product?
-- [ ] Will you commit ~5–8 hours/week to building? Sets realistic timeline.
+- **Phase A first.** Nothing else moves until a chef can sign in and upload a menu.
+- **Phase B second.** The UI re-center happens inside Phase B, not as a separate cleanup phase.
+- Sub-prompts per chunk, same rhythm as v1: build → review → commit → push.
+- The roadmap is a tool, not scripture. If reality argues with it, the roadmap loses.
 
----
+### Anti-patterns
 
-## 7. Success Metrics
-
-**Phase 1 success:** Crudo Santo menu fully entered. You stop using Google Docs for recipes.
-
-**Phase 2 success:** You run at least 10 real test sessions in the app. Recipe versions are being created from sessions, not typed from scratch.
-
-**Phase 3 success:** Line cooks at Crudo Santo training reference the app's recipe cards. Giuseppe uses it without complaining.
-
-**Product success (Phase 6 trigger):** Another chef sees yours and asks "can I use that?"
+- Building Phase F (costing) features in Phase A because they sound cool.
+- Centering the schema in the UI. The model exists to support the chef, not the other way around.
+- Deferring AI parsing as "too risky." The parser IS the product. v1 deferring it was a mistake.
+- Treating collaboration as polish. The kitchen is a team; the app should reflect that.
+- Generalizing for "future restaurants" while Crudo Santo is still the only customer.
+- Finishing v1 Phase 1c component-centric ingredient/sub-recipe UI when Phase B supersedes it.
 
 ---
 
-*Last updated: May 19, 2026*
+## 9. Open Questions
+
+- Final product name
+- Custom domain
+- Giuseppe's access level — owner-equivalent, admin, member? (Phase C question; can defer)
+- Where uploaded photos live long-term. Supabase Storage is fine for v1; scale question for Phase H.
+- Which LLM / vision API for parsing — Anthropic is the default; revisit if cost or quality dictates.
+- Dish ↔ recipe linkage in schema: bridge via auto-component per dish vs. add `dish_id` on recipes (decide in Phase B planning).
+
+---
+
+## 10. Success Metrics
+
+- **Phase A success:** Crudo Santo's full menu uploaded from a PDF or image. You stop typing dish names by hand.
+- **Phase B success:** A handwritten recipe becomes a structured recipe in under three minutes. The chef stops keeping recipes in Google Docs.
+- **Phase C success:** You and Giuseppe stop messaging about recipes in Slack. The dashboard tells you both what's outstanding.
+- **Phase D success:** 10+ real testing sessions captured in the app. Each one produces or updates a recipe.
+- **Phase E success:** A line cook at training uses the printed card from the app. Doesn't ask "what's the latest version?"
+- **Product success (Phase H trigger):** Another chef sees yours and asks if they can use it.
