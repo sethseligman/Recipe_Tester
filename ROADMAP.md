@@ -95,9 +95,9 @@ The following is already on `main` and working. v2 builds on top of it; nothing 
 
 **Goal:** A new user signs in, uploads a menu (PDF, image, or pasted text), reviews the AI-parsed result, and lands in their app with a real restaurant + menus + sections + dishes in place. Time from sign-in to populated app: under 5 minutes for a typical menu.
 
-- [ ] Rewrite onboarding: replace "create blank restaurant" with "upload your menu" as the primary flow
-- [ ] Upload UI: drag-and-drop or file picker for PDF/image; paste-text alternative; restaurant name + slug entered alongside
-- [ ] Supabase Storage bucket for menu uploads (private, RLS-restricted to restaurant members)
+- [x] Rewrite onboarding: replace "create blank restaurant" with "upload your menu" as the primary flow
+- [x] Upload UI: drag-and-drop or file picker for PDF/image; paste-text alternative; restaurant name + slug entered alongside
+- [x] Supabase Storage bucket for menu uploads (private, RLS-restricted per-user path until restaurant exists)
 - [ ] Server-side parser:
   - PDF → text extraction (pdf-parse or equivalent)
   - Image → vision pass (Anthropic API)

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation"
 
-import { OnboardingChoice } from "@/app/onboarding/onboarding-choice"
+import { MenuUploadForm } from "@/app/onboarding/upload/menu-upload-form"
 import { createClient } from "@/lib/supabase/server"
 
-export default async function OnboardingPage() {
+export default async function OnboardingUploadPage() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -17,7 +17,6 @@ export default async function OnboardingPage() {
     .from("restaurant_members")
     .select("restaurants(slug)")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: true })
     .limit(1)
 
   const slug = memberships?.[0]?.restaurants?.slug
@@ -27,7 +26,7 @@ export default async function OnboardingPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-      <OnboardingChoice />
+      <MenuUploadForm />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { createRestaurant } from "@/app/onboarding/actions"
+import { slugifyName } from "@/lib/slugify"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,16 +30,6 @@ const onboardingSchema = z.object({
 })
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>
-
-function slugifyName(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-}
 
 export function OnboardingForm() {
   const [slugManual, setSlugManual] = useState(false)
