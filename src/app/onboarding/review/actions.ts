@@ -24,6 +24,11 @@ const confirmInputSchema = z.object({
   tree: parsedMenuTreeSchema,
 })
 
+function formatDbError(error: { message: string; hint?: string | null; code?: string }) {
+  const hint = error.hint ? ` (${error.hint})` : ""
+  return `${error.message}${hint}`
+}
+
 async function assertUploadAccess(storagePath: string): Promise<
   | { error: string }
   | { userId: string }
@@ -92,6 +97,14 @@ export async function confirmMenuImport(
     return { error: "You must be signed in." }
   }
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    return { error: "Your session expired. Sign in again and retry." }
+  }
+
   const { data: existingMember } = await supabase
     .from("restaurant_members")
     .select("id")
@@ -103,21 +116,33 @@ export async function confirmMenuImport(
     return { error: "You already belong to a restaurant." }
   }
 
-  const { data: restaurant, error: restaurantError } = await supabase
-    .from("restaurants")
-    .insert({
-      name: name.trim(),
-      slug,
-      created_by: user.id,
-    })
-    .select("id")
-    .single()
+  // Match createRestaurant: insert without .select() so RETURNING does not run
+  // against "members read restaurants" before handle_new_restaurant adds ownership.
+  const { error: restaurantError } = await supabase.from("restaurants").insert({
+    name: name.trim(),
+    slug,
+    created_by: user.id,
+  })
 
   if (restaurantError) {
     if (restaurantError.code === "23505") {
       return { error: "That URL is already taken. Choose a different slug." }
     }
-    throw restaurantError
+    return { error: formatDbError(restaurantError) }
+  }
+
+  const { data: restaurant, error: restaurantFetchError } = await supabase
+    .from("restaurants")
+    .select("id")
+    .eq("slug", slug)
+    .single()
+
+  if (restaurantFetchError || !restaurant) {
+    return {
+      error: restaurantFetchError
+        ? formatDbError(restaurantFetchError)
+        : "Restaurant was created but could not be loaded. Try signing in again.",
+    }
   }
 
   const restaurantId = restaurant.id
@@ -177,8 +202,11 @@ export async function confirmMenuImport(
       }
     }
   } catch (err) {
-    await supabase.from("restaurants").delete().eq("id", restaurantId)
-    throw err
+    const message =
+      err && typeof err === "object" && "message" in err
+        ? formatDbError(err as { message: string; hint?: string | null; code?: string })
+        : "Could not save menu data."
+    return { error: message }
   }
 
   revalidatePath("/")
