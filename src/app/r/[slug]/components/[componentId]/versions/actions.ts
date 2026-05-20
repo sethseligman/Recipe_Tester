@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import {
-  isRecipeVersionStatus,
-  type RecipeVersionStatus,
-} from "@/lib/recipe-versions/status"
+import { isRecipeVersionStatus } from "@/lib/recipe-versions/status"
 import { UNIT_TYPE_VALUES } from "@/lib/recipe-versions/units"
 import { createClient } from "@/lib/supabase/server"
 
@@ -352,5 +349,3 @@ export async function forceUnapproveRecipeVersion(
   revalidateVersionRoutes(slug, componentId, versionId)
   return {}
 }
-
-export type { RecipeVersionStatus }
