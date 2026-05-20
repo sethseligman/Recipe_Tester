@@ -1,6 +1,27 @@
 # Recipe Tester — Database Schema
 
-Applied in Phase 1a via `supabase/migrations/20260519224149_initial_schema.sql`. Regenerate TypeScript types after any schema change: `npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts`.
+Applied in Phase 1a via `supabase/migrations/20260519224149_initial_schema.sql`, with follow-up in `20260520004540_ingredients_master_and_units.sql`. Regenerate TypeScript types after any schema change: `npx supabase gen types typescript --linked 2>/dev/null > src/lib/supabase/database.types.ts`.
+
+## Enums
+
+### `unit_type`
+
+Canonical units for recipe ingredient quantities. Adding a value requires a migration.
+
+| Value | Typical use |
+|-------|-------------|
+| `g` | Grams (metric mass) |
+| `kg` | Kilograms |
+| `ml` | Milliliters (metric volume) |
+| `l` | Liters |
+| `tsp` | Teaspoon |
+| `tbsp` | Tablespoon |
+| `cup` | Cup |
+| `fl_oz` | Fluid ounce |
+| `oz` | Ounce (mass) |
+| `lb` | Pound |
+| `each` | Count / whole item |
+| `pinch` | Small imprecise amount |
 
 ## Tables
 
@@ -90,6 +111,23 @@ Reusable recipe building block (e.g. leche de tigre), shared across dishes.
 | `created_at` | `timestamptz` | |
 | `updated_at` | `timestamptz` | |
 
+### `ingredients`
+
+Restaurant-scoped master list of ingredients. Chefs share one canonical name per restaurant; duplicates are blocked by normalized name.
+
+| Column | Type | Notes |
+|--------|------|--------|
+| `id` | `uuid` | PK |
+| `restaurant_id` | `uuid` | FK → `restaurants` |
+| `name` | `text` | Required display name |
+| `name_normalized` | `text` | **Generated (stored):** `lower(regexp_replace(trim(name), '\s+', ' ', 'g'))` — used for dedupe |
+| `description` | `text` | Optional |
+| `created_by` | `uuid` | FK → `auth.users`, nullable |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | Auto-updated by trigger |
+
+Unique on `(restaurant_id, name_normalized)`.
+
 ### `dish_components`
 
 Join table: which components belong to which dish, with optional role (base, protein, garnish, etc.).
@@ -128,7 +166,7 @@ Unique on `(component_id, version_number)`.
 
 ### `recipe_ingredients`
 
-Ingredient line or sub-recipe reference on a recipe version. Each row is **either** a named ingredient **or** a sub-recipe — not both (XOR check).
+Ingredient line or sub-recipe reference on a recipe version. Each row is **either** a master-list ingredient **or** a sub-recipe — not both (XOR check). Every row requires `qty` and `unit`.
 
 | Column | Type | Notes |
 |--------|------|--------|
@@ -136,10 +174,10 @@ Ingredient line or sub-recipe reference on a recipe version. Each row is **eithe
 | `recipe_version_id` | `uuid` | FK → `recipe_versions` |
 | `restaurant_id` | `uuid` | FK → `restaurants`, auto-set from version |
 | `position` | `int` | Default 0 |
-| `ingredient_name` | `text` | Set when not a sub-recipe |
+| `ingredient_id` | `uuid` | FK → `ingredients`, set when not a sub-recipe |
 | `sub_recipe_version_id` | `uuid` | FK → `recipe_versions`, must be `approved` |
-| `qty` | `numeric` | Optional |
-| `unit` | `text` | Optional |
+| `qty` | `numeric` | Required |
+| `unit` | `unit_type` | Required; canonical enum |
 | `prep_note` | `text` | Optional |
 | `created_at` | `timestamptz` | |
 
@@ -147,22 +185,25 @@ Ingredient line or sub-recipe reference on a recipe version. Each row is **eithe
 
 | Name | Purpose |
 |------|---------|
-| `set_updated_at` | Sets `updated_at = now()` on update (restaurants, menus, sections, dishes, components, recipe_versions). |
+| `set_updated_at` | Sets `updated_at = now()` on update (restaurants, menus, sections, dishes, components, ingredients, recipe_versions). |
 | `trg_sections_restaurant` / `trg_dishes_restaurant` / `trg_dish_components_restaurant` / `trg_recipe_versions_restaurant` / `trg_recipe_ingredients_restaurant` | BEFORE INSERT/UPDATE: copy `restaurant_id` from parent row so denormalized column stays correct. |
 | `handle_new_restaurant` | AFTER INSERT on `restaurants`: insert creator as `owner` in `restaurant_members`. |
 | `check_sub_recipe_approved` | BEFORE INSERT/UPDATE on `recipe_ingredients`: `sub_recipe_version_id` must reference a version with `status = 'approved'`. |
 | `check_unapprove_dependencies` | BEFORE UPDATE on `recipe_versions`: block leaving `approved` if other approved recipes depend on this version; sets `approved_at` when approving. |
 | `force_unapprove_recipe_version(version_id, new_status)` | Security-definer escape hatch: sets `app.force_unapprove` and changes status to `draft`, `testing`, or `archived`. |
-| `recipe_ingredients` XOR check | `(ingredient_name IS NOT NULL AND sub_recipe_version_id IS NULL) OR (ingredient_name IS NULL AND sub_recipe_version_id IS NOT NULL)`. |
+| `recipe_ingredients_xor_check` | `(ingredient_id IS NOT NULL AND sub_recipe_version_id IS NULL) OR (ingredient_id IS NULL AND sub_recipe_version_id IS NOT NULL)`. |
+| `recipe_ingredients_qty_required` | `qty IS NOT NULL AND unit IS NOT NULL` on every row. |
+| `check_ingredient_same_restaurant` | BEFORE INSERT/UPDATE on `recipe_ingredients`: `ingredient_id` must belong to the same restaurant as the parent recipe version. |
+| `check_sub_recipe_same_restaurant` | BEFORE INSERT/UPDATE on `recipe_ingredients`: `sub_recipe_version_id` must belong to the same restaurant as the parent recipe version. |
 
 **Migration note:** `is_restaurant_member()` is created after `restaurant_members` exists (function body references that table).
 
 ## RLS policies
 
-RLS is enabled on all nine tables. Pattern:
+RLS is enabled on all ten tables. Pattern:
 
 - **`is_restaurant_member(restaurant_id)`** — helper function (security definer) used in most policies.
-- **Child tables** — `USING` / `WITH CHECK` on denormalized `restaurant_id` for uniform member access on menus, sections, dishes, components, dish_components, recipe_versions, recipe_ingredients.
+- **Child tables** — `USING` / `WITH CHECK` on denormalized `restaurant_id` for uniform member access on menus, sections, dishes, components, ingredients, dish_components, recipe_versions, recipe_ingredients.
 - **`restaurants`** — members can SELECT/UPDATE their restaurants; any authenticated user can INSERT (creator becomes owner via trigger).
 - **`restaurant_members`** — members can SELECT; only `owner`/`admin` can INSERT/UPDATE/DELETE membership rows.
 

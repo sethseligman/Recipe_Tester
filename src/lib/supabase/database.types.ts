@@ -183,6 +183,47 @@ export type Database = {
           },
         ]
       }
+      ingredients: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          name_normalized: string | null
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          name_normalized?: string | null
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          name_normalized?: string | null
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredients_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menus: {
         Row: {
           created_at: string
@@ -225,40 +266,47 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          ingredient_name: string | null
+          ingredient_id: string | null
           position: number
           prep_note: string | null
           qty: number | null
           recipe_version_id: string
           restaurant_id: string
           sub_recipe_version_id: string | null
-          unit: string | null
+          unit: Database["public"]["Enums"]["unit_type"] | null
         }
         Insert: {
           created_at?: string
           id?: string
-          ingredient_name?: string | null
+          ingredient_id?: string | null
           position?: number
           prep_note?: string | null
           qty?: number | null
           recipe_version_id: string
           restaurant_id: string
           sub_recipe_version_id?: string | null
-          unit?: string | null
+          unit?: Database["public"]["Enums"]["unit_type"] | null
         }
         Update: {
           created_at?: string
           id?: string
-          ingredient_name?: string | null
+          ingredient_id?: string | null
           position?: number
           prep_note?: string | null
           qty?: number | null
           recipe_version_id?: string
           restaurant_id?: string
           sub_recipe_version_id?: string | null
-          unit?: string | null
+          unit?: Database["public"]["Enums"]["unit_type"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipe_ingredients_recipe_version_id_fkey"
             columns: ["recipe_version_id"]
@@ -461,7 +509,19 @@ export type Database = {
       is_restaurant_member: { Args: { rid: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      unit_type:
+        | "g"
+        | "kg"
+        | "ml"
+        | "l"
+        | "tsp"
+        | "tbsp"
+        | "cup"
+        | "fl_oz"
+        | "oz"
+        | "lb"
+        | "each"
+        | "pinch"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -591,6 +651,21 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      unit_type: [
+        "g",
+        "kg",
+        "ml",
+        "l",
+        "tsp",
+        "tbsp",
+        "cup",
+        "fl_oz",
+        "oz",
+        "lb",
+        "each",
+        "pinch",
+      ],
+    },
   },
 } as const

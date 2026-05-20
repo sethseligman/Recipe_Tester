@@ -32,6 +32,14 @@ Log of meaningful design choices. AI agents and contributors should read this al
 - **TypeScript types** in `src/lib/supabase/database.types.ts` are generated. Regenerate with `npx supabase gen types typescript --linked` after any schema change.
 - **`handle_new_restaurant` trigger no-ops when `auth.uid()` is null.** Dashboard-created restaurants (SQL editor as postgres) do not auto-get an owner row — caller must insert `restaurant_members` manually. Authenticated app calls always have `auth.uid()` and behave normally.
 
+## Database (Phase 1a follow-up — ingredients & units)
+
+- **Ingredients are first-class restaurant-scoped rows** (`ingredients` table). `recipe_ingredients` references `ingredients.id`; free-text ingredient names are not allowed. Two chefs writing recipes for the same restaurant share one master list.
+- **Ingredient name uniqueness:** case-insensitive, whitespace-normalized via the generated `name_normalized` column with a unique index. UI will surface near-matches when chefs try to create a new ingredient.
+- **Units are a fixed enum (`unit_type`):** `g`, `kg`, `ml`, `l`, `tsp`, `tbsp`, `cup`, `fl_oz`, `oz`, `lb`, `each`, `pinch`. No free-text units. Adding a unit requires a migration.
+- **Cross-restaurant guards:** ingredients and sub-recipes referenced from `recipe_ingredients` must belong to the same restaurant as the parent recipe. Enforced by triggers.
+- **`method` (recipe instructions) remains free-form markdown** — explicitly not normalized in v1. `prep_note` remains free text with UI suggestion list to come in Phase 1c.
+
 ---
 
 *Add new entries at the bottom with date and short rationale when decisions change.*
