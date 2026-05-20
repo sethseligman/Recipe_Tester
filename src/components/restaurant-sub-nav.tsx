@@ -12,6 +12,7 @@ export function RestaurantSubNav({ slug }: { slug: string }) {
   const menusActive =
     pathname === base || pathname.startsWith(`${base}/menus`)
   const componentsActive = pathname.startsWith(`${base}/components`)
+  const ingredientsActive = pathname.startsWith(`${base}/ingredients`)
 
   const linkClass = (active: boolean) =>
     cn(
@@ -26,6 +27,9 @@ export function RestaurantSubNav({ slug }: { slug: string }) {
       </Link>
       <Link href={`${base}/components`} className={linkClass(componentsActive)}>
         Components
+      </Link>
+      <Link href={`${base}/ingredients`} className={linkClass(ingredientsActive)}>
+        Ingredients
       </Link>
     </nav>
   )
