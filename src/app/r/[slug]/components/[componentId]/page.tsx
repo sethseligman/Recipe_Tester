@@ -33,7 +33,9 @@ export default async function ComponentDetailPage({
       </p>
       <h1 className="text-2xl font-semibold tracking-tight">{component.name}</h1>
       {component.description ? (
-        <p className="mt-2 text-muted-foreground">{component.description}</p>
+        <p className="mt-2 max-w-prose text-sm text-muted-foreground whitespace-pre-wrap">
+          {component.description}
+        </p>
       ) : null}
       <p className="mt-6 text-muted-foreground">
         Recipe versions and ingredients are coming in the next step.

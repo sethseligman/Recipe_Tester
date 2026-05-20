@@ -12,7 +12,14 @@ Recipe development and testing platform for restaurants in the **pre-opening** p
 
 ## Current phase
 
-**Phase 0 is complete.** Moving to **Phase 1a** (Supabase schema + RLS). No recipe UI or testing features until the schema is in place.
+**Current phase status:**
+
+- Phase 0: complete (auth, magic link, sign-out)
+- Phase 1a: complete (initial schema, RLS, approval triggers)
+- Phase 1a follow-up: complete (ingredients master table, unit_type enum)
+- Phase 1b: complete (restaurants, menus, sections, dishes — full CRUD)
+- Phase 1c partial: complete for components + dish-component linking
+- Phase 1c remaining (in progress): ingredients master UI, recipe_versions UI, recipe_ingredients UI, sub-recipe references, status workflow
 
 ## Core principles (ROADMAP §2)
 

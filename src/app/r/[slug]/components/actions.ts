@@ -5,11 +5,14 @@ import { z } from "zod"
 
 import { createClient } from "@/lib/supabase/server"
 
-const nameSchema = z.object({
+const componentFieldsSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
+  description: z
+    .string()
+    .max(500, "Description must be 500 characters or less"),
 })
 
-const createComponentSchema = nameSchema.extend({
+const createComponentSchema = componentFieldsSchema.extend({
   restaurantId: z.string().uuid(),
   slug: z.string().min(1),
 })
@@ -19,9 +22,7 @@ const componentIdSchema = z.object({
   slug: z.string().min(1),
 })
 
-const renameComponentSchema = componentIdSchema.extend({
-  name: z.string().min(1, "Name is required").max(100),
-})
+const updateComponentSchema = componentIdSchema.merge(componentFieldsSchema)
 
 function componentsPath(slug: string) {
   return `/r/${slug}/components`
@@ -29,6 +30,11 @@ function componentsPath(slug: string) {
 
 function componentDetailPath(slug: string, componentId: string) {
   return `/r/${slug}/components/${componentId}`
+}
+
+function normalizeDescription(description: string): string | null {
+  const trimmed = description.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 export async function createComponent(
@@ -39,7 +45,7 @@ export async function createComponent(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" }
   }
 
-  const { restaurantId, name, slug } = parsed.data
+  const { restaurantId, name, description, slug } = parsed.data
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -47,6 +53,7 @@ export async function createComponent(
     .insert({
       restaurant_id: restaurantId,
       name,
+      description: normalizeDescription(description),
     })
     .select("id")
     .single()
@@ -59,20 +66,23 @@ export async function createComponent(
   return { componentId: data.id }
 }
 
-export async function renameComponent(
-  input: z.infer<typeof renameComponentSchema>
+export async function updateComponent(
+  input: z.infer<typeof updateComponentSchema>
 ): Promise<{ error?: string }> {
-  const parsed = renameComponentSchema.safeParse(input)
+  const parsed = updateComponentSchema.safeParse(input)
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" }
   }
 
-  const { componentId, name, slug } = parsed.data
+  const { componentId, name, description, slug } = parsed.data
   const supabase = await createClient()
 
   const { error } = await supabase
     .from("components")
-    .update({ name })
+    .update({
+      name,
+      description: normalizeDescription(description),
+    })
     .eq("id", componentId)
 
   if (error) {

@@ -40,6 +40,8 @@ Log of meaningful design choices. AI agents and contributors should read this al
 - **Cross-restaurant guards:** ingredients and sub-recipes referenced from `recipe_ingredients` must belong to the same restaurant as the parent recipe. Enforced by triggers.
 - **`method` (recipe instructions) remains free-form markdown** — explicitly not normalized in v1. `prep_note` remains free text with UI suggestion list to come in Phase 1c.
 
+- **Ingredients master table (`e6fbf2a`) ships ahead of its UI by design.** The DB schema for ingredients + `unit_type` + cross-restaurant guards landed during Phase 1a follow-up so that recipe-version UI in Phase 1c can be built against a correct schema rather than retrofit later. Until ingredients UI lands (Phase 1c Chunk A), the `ingredients` table has no app-level surface.
+
 ---
 
 *Add new entries at the bottom with date and short rationale when decisions change.*

@@ -12,7 +12,7 @@ import { z } from "zod"
 import {
   archiveComponent,
   createComponent,
-  renameComponent,
+  updateComponent,
 } from "@/app/r/[slug]/components/actions"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,13 +38,17 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import type { Tables } from "@/lib/supabase/database.types"
 
-const nameSchema = z.object({
+const componentFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
+  description: z
+    .string()
+    .max(500, "Description must be 500 characters or less"),
 })
 
-type NameFormValues = z.infer<typeof nameSchema>
+type ComponentFormValues = z.infer<typeof componentFormSchema>
 
 type ComponentsHomeProps = {
   slug: string
@@ -52,12 +56,12 @@ type ComponentsHomeProps = {
   components: Tables<"components">[]
 }
 
-function NameDialog({
+function ComponentFormDialog({
   open,
   onOpenChange,
   title,
   description,
-  defaultName,
+  defaultValues,
   submitLabel,
   successMessage,
   onSubmit,
@@ -66,31 +70,31 @@ function NameDialog({
   onOpenChange: (open: boolean) => void
   title: string
   description: string
-  defaultName?: string
+  defaultValues?: { name: string; description: string }
   submitLabel: string
   successMessage: string
-  onSubmit: (name: string) => Promise<{ error?: string }>
+  onSubmit: (values: ComponentFormValues) => Promise<{ error?: string }>
 }) {
   const [formError, setFormError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const form = useForm<NameFormValues>({
-    resolver: zodResolver(nameSchema),
-    defaultValues: { name: defaultName ?? "" },
+  const form = useForm<ComponentFormValues>({
+    resolver: zodResolver(componentFormSchema),
+    defaultValues: defaultValues ?? { name: "", description: "" },
   })
 
   function handleOpenChange(next: boolean) {
     if (!next) {
-      form.reset({ name: defaultName ?? "" })
+      form.reset(defaultValues ?? { name: "", description: "" })
       setFormError(null)
     }
     onOpenChange(next)
   }
 
-  function handleSubmit(values: NameFormValues) {
+  function handleSubmit(values: ComponentFormValues) {
     setFormError(null)
     startTransition(async () => {
-      const result = await onSubmit(values.name)
+      const result = await onSubmit(values)
       if (result.error) {
         setFormError(result.error)
         toast.error(result.error)
@@ -128,6 +132,22 @@ function NameDialog({
               </p>
             ) : null}
           </div>
+          <div className="grid gap-2">
+            <Label htmlFor="component-description">Description (optional)</Label>
+            <Textarea
+              id="component-description"
+              placeholder="What is this component? e.g. 'Citrus marinade base for ceviches'"
+              disabled={isPending}
+              maxLength={500}
+              className="min-h-20"
+              {...form.register("description")}
+            />
+            {form.formState.errors.description ? (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.description.message}
+              </p>
+            ) : null}
+          </div>
           <DialogFooter>
             <Button
               type="button"
@@ -161,16 +181,19 @@ export function ComponentsHome({
 }: ComponentsHomeProps) {
   const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
-  const [renameTarget, setRenameTarget] = useState<Tables<"components"> | null>(
-    null
-  )
+  const [editTarget, setEditTarget] = useState<Tables<"components"> | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<Tables<"components"> | null>(
     null
   )
   const [isArchiving, startArchiveTransition] = useTransition()
 
-  async function handleCreate(name: string) {
-    const result = await createComponent({ restaurantId, name, slug })
+  async function handleCreate(values: ComponentFormValues) {
+    const result = await createComponent({
+      restaurantId,
+      name: values.name,
+      description: values.description,
+      slug,
+    })
     if (result.error) {
       return { error: result.error }
     }
@@ -259,9 +282,9 @@ export function ComponentsHome({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onSelect={() => setRenameTarget(component)}
+                      onSelect={() => setEditTarget(component)}
                     >
-                      Rename
+                      Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
@@ -277,7 +300,7 @@ export function ComponentsHome({
         </ul>
       )}
 
-      <NameDialog
+      <ComponentFormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         title="New component"
@@ -287,22 +310,30 @@ export function ComponentsHome({
         onSubmit={handleCreate}
       />
 
-      <NameDialog
-        key={renameTarget?.id ?? "rename-closed"}
-        open={renameTarget !== null}
+      <ComponentFormDialog
+        key={editTarget?.id ?? "edit-closed"}
+        open={editTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setRenameTarget(null)
+          if (!open) setEditTarget(null)
         }}
-        title="Rename component"
-        description="Update the component name."
-        defaultName={renameTarget?.name}
+        title="Edit component"
+        description="Update the name and description for this component."
+        defaultValues={
+          editTarget
+            ? {
+                name: editTarget.name,
+                description: editTarget.description ?? "",
+              }
+            : undefined
+        }
         submitLabel="Save"
-        successMessage="Component renamed"
-        onSubmit={async (name) => {
-          if (!renameTarget) return { error: "No component selected" }
-          return renameComponent({
-            componentId: renameTarget.id,
-            name,
+        successMessage="Component updated"
+        onSubmit={async (values) => {
+          if (!editTarget) return { error: "No component selected" }
+          return updateComponent({
+            componentId: editTarget.id,
+            name: values.name,
+            description: values.description,
             slug,
           })
         }}
