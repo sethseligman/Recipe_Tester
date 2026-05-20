@@ -87,4 +87,4 @@ Open [http://localhost:3000](http://localhost:3000). If port 3000 is in use, Nex
 
 ## What’s next
 
-Phase 0 stops at auth and deployment readiness. Phase 1 adds the recipe book schema and UI—see [ROADMAP.md](./ROADMAP.md). Design decisions are logged in [DECISIONS.md](./DECISIONS.md).
+Foundation (auth, schema, menus, ingredients, versioning) is on `main`. **Current work: Phase A — menu upload + AI parse** — see [ROADMAP.md](./ROADMAP.md). Design decisions: [DECISIONS.md](./DECISIONS.md).
